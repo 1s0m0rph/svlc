@@ -6,7 +6,7 @@ define constants for svlc
 FILE_DEC_SEPARATOR = "d" # what character do we use to separate integer parts from decimal parts in filenames?
 
 # timing constants
-SECS_PER_CYCLE = 0.1 # run at 10Hz
+SECS_PER_CYCLE = 0.5 # run at 2Hz
 #TODO we may just want to upload when the compressed file gets to 5MB [get a rough estimate beforehand of how long/how many images this will take]
 SECS_PER_UPLOAD = 60 # upload every minute
 SECS_PER_LOG_UPLOAD = 3600 # logs very hour
@@ -23,5 +23,5 @@ MAX_FILE_SIZE_PER_UPLOAD = 5000000 # bytes
 
 # file handling constants
 LOCAL_BACKUP_LOC = "~/local_bak/"
-ENC_PASSPHRASE_LOC = "~/enc_pw.txt" # TODO make this file and make sure it has proper perms (640)
+ENC_PASSPHRASE_LOC = "./enc_pw.txt" # TODO make this file and make sure it has proper perms (640)
 PATH_TO_IMAGES = "./working_images/"

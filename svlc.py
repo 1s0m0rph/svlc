@@ -22,10 +22,10 @@ primary functionalities:
 
 #TODO log activity
 
-from svlc_src.recorder import *
-from svlc_src.gdrive_handler import *
-from svlc_src.file_handler import *
-from svlc_src.constants import *
+# from recorder import *
+from gdrive_handler import *
+from file_handler import *
+from constants import *
 
 from os import listdir, remove
 from time import time, sleep
@@ -35,7 +35,7 @@ import logging as log
 LOGFILE_NAME = "{}_STARTAT_{}.log".format(get_hostname(),float_to_filename_compatible_str(time()))
 
 # set up objects
-recorder = Recorder()
+# recorder = Recorder()
 drive_handler = GDriveHandler()
 file_handler = FileHandler()
 
@@ -48,24 +48,32 @@ log_upload_timer = Timer(SECS_PER_LOG_UPLOAD)
 # set up misc data
 num_times_logs_uploaded = 0
 
+# TODO (high priority)
+## get fucking gpg out of the logs
+## clean up the gpg files that are hanging around in the working dir
+## figure out why things aren't showing up on gdrive?
 
 def main_loop():
 	# check for timer expiration
 	if capture_timer.check_expired():
+		print('capture')
 		# perform capture
-		recorder.capture()
+		# recorder.capture()
 		# restart timer for next cycle
 		capture_timer.restart()
 
 	if purge_timer.check_expired():
+		print('purge')
 		# perform purge
 		drive_handler.purge_olds()
 		# restart timer for next cycle
 		purge_timer.restart()
 
 	if upload_timer.check_expired():
+		print('upload')
 		# get file list
 		files_to_package = listdir(PATH_TO_IMAGES)
+		files_to_package = [PATH_TO_IMAGES + x for x in files_to_package]
 		# perform compress/encrypt
 		files_to_upload = file_handler.compress_and_encrypt_batch(files_to_package)
 		# most likely, we'll get all or none, but track them separately (and only backup failures) just in case
@@ -115,7 +123,13 @@ if __name__ == "__main__":
 	log.info("File logger created, logging to {}".format(LOGFILE_NAME))
 
 	# initialize objects
-	recorder.begin_warmup()
+	# recorder.begin_warmup()
+
+	# start timers
+	capture_timer.start()
+	purge_timer.start()
+	upload_timer.start()
+	log_upload_timer.start()
 
 	# perform the main loop
 	while True:
@@ -128,5 +142,6 @@ if __name__ == "__main__":
 		remain_cycle_time = SECS_PER_CYCLE - (end_time - start_time)
 		if remain_cycle_time < 0:
 			log.debug("Cycle overrun by {} sec".format(-remain_cycle_time))
+			remain_cycle_time = 0
 		# delay remaining cycle time
 		sleep(remain_cycle_time)

@@ -3,7 +3,7 @@ recorder -- handles all functionalities for svlc related to the capturing of ima
 """
 
 import logging as log
-from svlc_src.util import *
+from util import *
 from os.path import isdir
 from os import mkdir
 from picamera import PiCamera # unrunnable except on the pis themselves
@@ -20,7 +20,7 @@ class Recorder:
 		self.warmup_timer.start()
 
 	def capture(self):
-		if not self.warmup_timer.is_complete():
+		if not self.warmup_timer.check_expired():
 			# not warmed up yet, do not attempt to capture
 			log.info("Ignoring capture request due to incomplete warmup.")
 			return

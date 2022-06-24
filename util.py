@@ -3,7 +3,7 @@ basic util functionality
 """
 
 import re
-from svlc_src.constants import *
+from constants import *
 from time import time
 import logging as log
 
@@ -82,9 +82,11 @@ class Timer:
 		if self.start_time is not None:
 			log.error("Attempting to start an already running timer (did you mean to call restart?)")
 		else:
+			self.running = True
 			self.start_time = time()
 
 	def restart(self):
+		self.running = True
 		self.start_time = time()
 
 	def stop(self):

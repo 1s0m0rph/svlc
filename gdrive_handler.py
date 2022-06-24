@@ -3,9 +3,9 @@ gdrive_handler -- handles all of the google drive related funcionalities for svl
 """
 import io
 
-from svlc_src.file_handler import *
-from svlc_src.constants import *
-from svlc_src.util import *
+from file_handler import *
+from constants import *
+from util import *
 
 from time import time
 import logging as log

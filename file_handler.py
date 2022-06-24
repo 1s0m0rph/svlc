@@ -2,7 +2,7 @@
 file_handler -- handles all of the local file manipulation (incl. compression, encryption, permanent backup [in the event of an upload ver fail])
 """
 
-from svlc_src.util import *
+from util import *
 
 from os.path import isdir, getsize
 from os import mkdir, remove
@@ -56,7 +56,7 @@ def encrypt_file(filename,enc_filename):
 
 	# do the encryption
 	with open(filename,'rb') as raw_file:
-		gpg.encrypt_file(raw_file,[],passphrase=key,output=enc_filename)
+		gpg.encrypt_file(raw_file,[],passphrase=key,output=enc_filename,symmetric=True)
 
 
 def check_if_files_match(local_file_path, downloaded_file_path):

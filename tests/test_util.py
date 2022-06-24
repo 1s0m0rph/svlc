@@ -1,5 +1,5 @@
 from unittest import TestCase
-from svlc_src.util import *
+from svlc.util import *
 
 class TestParseFileName(TestCase):
 	def test_proper_format_int_timestamp(self):
