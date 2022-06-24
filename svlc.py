@@ -46,15 +46,7 @@ purge_timer = Timer(SECS_PER_PURGE)
 upload_timer = Timer(SECS_PER_UPLOAD)
 log_upload_timer = Timer(SECS_PER_LOG_UPLOAD)
 
-# set up misc data
-num_times_logs_uploaded = 0
-
-# TODO (high priority)
-## get fucking gpg out of the logs
-## clean up the gpg files that are hanging around in the working dir
-## figure out why things aren't showing up on gdrive?
-
-def main_loop():
+def main_loop(num_times_logs_uploaded=0):
 	# check for timer expiration
 	if capture_timer.check_expired():
 		# perform capture
@@ -97,20 +89,29 @@ def main_loop():
 
 	if log_upload_timer.check_expired():
 		# copy to temp for uploading with new name to avoid rename issues on the drive side
-		upload_file_name = LOGFILE_NAME[:-4] + "_{}.log".format(num_times_logs_uploaded)
-		copy(LOGFILE_NAME,upload_file_name)
-		# perform compress/encrypt
-		files_to_upload = file_handler.compress_and_encrypt_batch([upload_file_name])
+		copy_of_log = LOGFILE_NAME[:-4] + "_{}.log".format(num_times_logs_uploaded)
+		copy(LOGFILE_NAME,copy_of_log)
+		# perform encrypt (no need to compress logs)
+		enc_fname = LOGFILE_NAME[:-4] + "_{}.log.gpg".format(num_times_logs_uploaded)
+		encrypt_file(copy_of_log,enc_fname)
 		# upload the file
-		drive_handler.upload_file(files_to_upload[0])
+		drive_handler.upload_file(enc_fname)
 		# do not verify, just delete the temp copy of the file
-		remove(upload_file_name)
+		remove(copy_of_log)
+		remove(enc_fname)
+
+		num_times_logs_uploaded += 1
 
 		# restart timer for next cycle
 		log_upload_timer.restart()
 
+	# keeping track of this without using globals cuz apparently python globals suck
+	return num_times_logs_uploaded
 
 if __name__ == "__main__":
+
+	# initialize persistent data
+	num_times_logs_uploaded = 0
 
 	# initialize objects
 	if not DEBUG_NO_RECORDER:
@@ -126,8 +127,8 @@ if __name__ == "__main__":
 	while True:
 		# record cycle start time 
 		start_time = time() # epoch in seconds
-		
-		main_loop()
+
+		num_times_logs_uploaded = main_loop(num_times_logs_uploaded)
 		
 		end_time = time()
 		remain_cycle_time = SECS_PER_CYCLE - (end_time - start_time)

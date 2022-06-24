@@ -70,7 +70,8 @@ class GDriveHandler:
 
 		# get the contents of the 'my drive'/top level dir
 		try:
-			top_lv_contents = self.service.files().list(fields="nextPageToken, files(id, name)").execute().get('files',[])
+			gdrive_qry = self.service.files().list(q="trashed=false and name contains 'sv_dev'",fields="nextPageToken, files(id, name)").execute()
+			top_lv_contents = gdrive_qry.get('files',[])
 		except HttpError as e:
 			self.log.error("Caught HTTP error while getting the contents of the top level dir: {}".format(e))
 			return []
