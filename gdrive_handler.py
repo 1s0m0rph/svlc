@@ -85,8 +85,8 @@ class GDriveHandler:
 		if 0 == len(top_lv_qry):
 			self.log.error("unable to find {} directory (active/working dir) on google drive".format(ACTIVE_GDRIVE_DIR_NAME))
 			return []
-		working_dir_id = top_lv_qry[0]['id']
-		return working_dir_id
+		self.working_dir_id = top_lv_qry[0]['id']
+		return self.working_dir_id
 		
 	def upload_file(self, path_to_file):
 		"""
