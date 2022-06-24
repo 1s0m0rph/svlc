@@ -1,5 +1,5 @@
 """
-gdrive_handler -- handles all of the google drive related funcionalities for svlc
+gdrive_handler -- handles all of the google drive related functionalities for svlc
 """
 import io
 
@@ -8,7 +8,6 @@ from constants import *
 from util import *
 
 from time import time
-import logging as log
 import os
 from os.path import getsize
 from shutil import copyfileobj
@@ -51,10 +50,11 @@ class GDriveHandler:
 	"""
 	
 	def __init__(self):
+		self.log = get_logger('gdrive_handler.GDriveHandler')
 		try:
 			self.service = init_service()
 		except HttpError as e:
-			log.error("Caught HTTP error while initializing google drive handler: {}".format(e))
+			self.log.error("Caught HTTP error while initializing google drive handler: {}".format(e))
 
 		self.working_dir_id = None # hold onto this so we don't have to get it every time
 
@@ -72,18 +72,18 @@ class GDriveHandler:
 		try:
 			top_lv_contents = self.service.files().list(fields="nextPageToken, files(id, name)").execute().get('files',[])
 		except HttpError as e:
-			log.error("Caught HTTP error while getting the contents of the top level dir: {}".format(e))
+			self.log.error("Caught HTTP error while getting the contents of the top level dir: {}".format(e))
 			return []
 
 		if not top_lv_contents:
-			log.error("Initial query to google drive to get ID of working directory failed.")
+			self.log.error("Initial query to google drive to get ID of working directory failed.")
 			return []
 
 		# find the working dir ID in the returned list
 		top_lv_qry = [x for x in top_lv_contents if ACTIVE_GDRIVE_DIR_NAME == x['name']]
 		# make sure we actually found it
 		if 0 == len(top_lv_qry):
-			log.error("unable to find {} directory (active/working dir) on google drive".format(ACTIVE_GDRIVE_DIR_NAME))
+			self.log.error("unable to find {} directory (active/working dir) on google drive".format(ACTIVE_GDRIVE_DIR_NAME))
 			return []
 		working_dir_id = top_lv_qry[0]['id']
 		return working_dir_id
@@ -95,18 +95,18 @@ class GDriveHandler:
 		returns: ID of uploaded file, or "" if failure to upload
 		"""
 
-		log.info("Uploading: {} to google drive".format(path_to_file))
+		self.log.info("Uploading: {} to google drive".format(path_to_file))
 
 		# do some basic verifications
 		# make sure the file exists
 		if not os.path.isfile(path_to_file):
-			log.error("Error uploading file: file {} not found".format(path_to_file))
+			self.log.error("Error uploading file: file {} not found".format(path_to_file))
 			return ""
 		# make sure the file is small enough
 		#TODO figure out how to remove this req by doing bigger uploads
 		filesize = getsize(path_to_file)
 		if filesize > MAX_FILE_SIZE_PER_UPLOAD:
-			log.warning("File {} is too large ({} bytes > max limit of {} bytes) to upload using simple (i.e. non interruptable) upload type. Will attempt to upload regardless, but integrity may be compromised.".format(path_to_file,filesize,MAX_FILE_SIZE_PER_UPLOAD))
+			self.log.warning("File {} is too large ({} bytes > max limit of {} bytes) to upload using simple (i.e. non interruptable) upload type. Will attempt to upload regardless, but integrity may be compromised.".format(path_to_file,filesize,MAX_FILE_SIZE_PER_UPLOAD))
 		# basic verifications complete -- proceed to upload
 
 		working_dir_id = self.get_working_dir_id()
@@ -115,7 +115,7 @@ class GDriveHandler:
 		try:
 			upload_result = self.service.files().create(body=meta_info,media_body=media,fields='id').execute()
 		except HttpError as e:
-			log.error("Caught HTTP error while uploading file {}: {}".format(path_to_file,e))
+			self.log.error("Caught HTTP error while uploading file {}: {}".format(path_to_file,e))
 
 		# return the ID given by the service
 		return upload_result.get('id')
@@ -125,11 +125,11 @@ class GDriveHandler:
 		remove the file with given name and ID from google drive
 		"""
 
-		log.info("Deleting file {} with ID {} from google drive".format(file_name,file_id))
+		self.log.info("Deleting file {} with ID {} from google drive".format(file_name,file_id))
 		try:
 			self.service.files().delete(fileId=file_id)
 		except HttpError as e:
-			log.error("Caught HTTP error while removing file {} with ID {}: {}".format(file_name, file_id, e))
+			self.log.error("Caught HTTP error while removing file {} with ID {}: {}".format(file_name, file_id, e))
 	
 	def purge_olds(self):
 		"""
@@ -147,7 +147,7 @@ class GDriveHandler:
 			
 			hostname,timestamp = parse_file_name(name)
 			if (hostname is None) or (timestamp is None):
-				log.error("Found file in working directory with improperly formatted name: {}".format(name))
+				self.log.error("Found file in working directory with improperly formatted name: {}".format(name))
 				# ignore this file
 			else:
 				# check if old enough to delete
@@ -167,12 +167,12 @@ class GDriveHandler:
 		try:
 			working_dir_contents = self.service.files().list(q='"{}" in parents'.format(working_dir_id), fields="nextPageToken, files(id, name)").execute().get('files',[])
 		except HttpError as e:
-			log.error("Caught HTTP error while getting contents of working directory: {}".format(e))
+			self.log.error("Caught HTTP error while getting contents of working directory: {}".format(e))
 			return []
 
 		if not working_dir_contents:
 			# this is not an error -- we'll get this if the directory is cleared completely
-			log.warning("No files found in working directory: {} (id: {})".format(ACTIVE_GDRIVE_DIR_NAME,working_dir_id))
+			self.log.warning("No files found in working directory: {} (id: {})".format(ACTIVE_GDRIVE_DIR_NAME,working_dir_id))
 			return []
 		
 		# we have the contents of the directory (names and file IDs) -- just return that as-is
@@ -199,7 +199,7 @@ class GDriveHandler:
 				copyfileobj(fh, verfile)
 
 		except HttpError:
-			log.error("Caught HTTP error while downloading file with ID {} (local path: {})".format(uploaded_file_id,path_to_file))
+			self.log.error("Caught HTTP error while downloading file with ID {} (local path: {})".format(uploaded_file_id,path_to_file))
 			return False
 
 		# download finished, now check that files match
@@ -209,7 +209,7 @@ class GDriveHandler:
 			remove(ver_file_name)
 			return True
 		else:
-			log.error("Downloaded file from drive does NOT match local file. Deleting downloaded file and marking local file for local backup.")
+			self.log.error("Downloaded file from drive does NOT match local file. Deleting downloaded file and marking local file for local backup.")
 			# verification not successful! tell the controller to perform a backup!
 			remove(ver_file_name)
 			return False

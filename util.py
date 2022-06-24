@@ -5,7 +5,9 @@ basic util functionality
 import re
 from constants import *
 from time import time
-import logging as log
+import logging
+import logging.config
+logging.config.fileConfig('logging.conf',disable_existing_loggers=False)
 
 def get_hostname():
 	"""
@@ -67,12 +69,35 @@ def float_to_filename_compatible_str(f:float):
 		
 	return "{}{}{}".format(integer_part,FILE_DEC_SEPARATOR,decimal_part)
 
+# create the logfile name once at program start
+LOGFILE_NAME = "{}_STARTAT_{}.log".format(get_hostname(),float_to_filename_compatible_str(time()))
+
+def get_logger(loc):
+	"""
+	get a logger object pointing to the latched logfile name with proper formatting
+	"""
+
+	# create the logger object
+	logger = logging.getLogger(loc) # TODO include file/class name here?
+	# create file handler to put all stuff into the file
+	fh = logging.FileHandler(LOGFILE_NAME)
+	fh.setLevel(logging.DEBUG)
+	fmtr = logging.Formatter("%(asctime)s:\t%(name)s - %(levelname)s:\t%(message)s")
+	fmtr.datefmt = "%Y-%m-%d %H:%M:%S %Z"
+	fh.setFormatter(fmtr)
+	logger.addHandler(fh)
+	return logger
+
+log = get_logger('util')
+log.info("Starting log in {}".format(LOGFILE_NAME))
+
 class Timer:
 
 	def __init__(self,timeout):
 		self.start_time = None
 		self.running = False
 		self.timeout = timeout
+		self.log = get_logger('util.Timer')
 
 	def reset(self):
 		self.start_time = None
@@ -80,7 +105,7 @@ class Timer:
 
 	def start(self):
 		if self.start_time is not None:
-			log.error("Attempting to start an already running timer (did you mean to call restart?)")
+			self.log.error("Attempting to start an already running timer (did you mean to call restart?)")
 		else:
 			self.running = True
 			self.start_time = time()

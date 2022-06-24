@@ -20,9 +20,10 @@ primary functionalities:
 
 """
 
-#TODO log activity
+DEBUG_NO_RECORDER = False # set this flag to debug on a non-pi system
 
-# from recorder import *
+if not DEBUG_NO_RECORDER:
+	from recorder import *
 from gdrive_handler import *
 from file_handler import *
 from constants import *
@@ -30,12 +31,12 @@ from constants import *
 from os import listdir, remove
 from time import time, sleep
 from shutil import copy
-import logging as log
 
-LOGFILE_NAME = "{}_STARTAT_{}.log".format(get_hostname(),float_to_filename_compatible_str(time()))
+log = get_logger('main')
 
 # set up objects
-# recorder = Recorder()
+if not DEBUG_NO_RECORDER:
+	recorder = Recorder()
 drive_handler = GDriveHandler()
 file_handler = FileHandler()
 
@@ -56,21 +57,19 @@ num_times_logs_uploaded = 0
 def main_loop():
 	# check for timer expiration
 	if capture_timer.check_expired():
-		print('capture')
 		# perform capture
-		# recorder.capture()
+		if not DEBUG_NO_RECORDER:
+			recorder.capture()
 		# restart timer for next cycle
 		capture_timer.restart()
 
 	if purge_timer.check_expired():
-		print('purge')
 		# perform purge
 		drive_handler.purge_olds()
 		# restart timer for next cycle
 		purge_timer.restart()
 
 	if upload_timer.check_expired():
-		print('upload')
 		# get file list
 		files_to_package = listdir(PATH_TO_IMAGES)
 		files_to_package = [PATH_TO_IMAGES + x for x in files_to_package]
@@ -113,17 +112,9 @@ def main_loop():
 
 if __name__ == "__main__":
 
-	# set up logging
-	log.basicConfig(filename=LOGFILE_NAME,
-					encoding='utf-8',
-					level=log.DEBUG,
-					format="%(asctime)s:\t %(levelname)s: %(message)s",#TODO figure out how to use Ztime
-					datefmt="%Y-%m-%d %H:%M:%S %Z"
-					)
-	log.info("File logger created, logging to {}".format(LOGFILE_NAME))
-
 	# initialize objects
-	# recorder.begin_warmup()
+	if not DEBUG_NO_RECORDER:
+		recorder.begin_warmup()
 
 	# start timers
 	capture_timer.start()

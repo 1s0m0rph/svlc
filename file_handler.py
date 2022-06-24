@@ -7,10 +7,12 @@ from util import *
 from os.path import isdir, getsize
 from os import mkdir, remove
 from shutil import move
-import logging as log
+import logging
 from filecmp import cmp as compare_files
 from gnupg import GPG
 import zipfile
+
+log = get_logger('file_handler')
 
 def local_backup(files_to_perm_backup):
 	"""
@@ -44,19 +46,26 @@ def compress_files(filenames,dest_filename):
 
 def encrypt_file(filename,enc_filename):
 	log.info("Encrypting {} using passphrase".format(filename))
+	# disable logging for all GPG related things because it is way too damned noisy -_-
+	log.setLevel(logging.CRITICAL)
 	gpg = GPG()
+	log.setLevel(logging.DEBUG)
 	key = ""
 
 	# read key from file
 	with open(ENC_PASSPHRASE_LOC,'r') as keyfile:
 		key = keyfile.readline()
+		# remove characters that will cause GPG to think this is an "incorrect passphrase" smdh
+		key = key.replace('\n','').replace('\r','')
 
 	if "" == key:
 		log.error("Error reading key from keyfile: empty string")
 
 	# do the encryption
 	with open(filename,'rb') as raw_file:
+		log.setLevel(logging.CRITICAL)
 		gpg.encrypt_file(raw_file,[],passphrase=key,output=enc_filename,symmetric=True)
+		log.setLevel(logging.DEBUG)
 
 
 def check_if_files_match(local_file_path, downloaded_file_path):
@@ -68,12 +77,13 @@ class FileHandler:
 		# this is a purely empirical thing to get a decent starting point for batch size -- it will be updated as we go
 		self.approx_final_bytes_per_img = 575000
 		self.num_images_approx_based_on = 8
+		self.log = get_logger('file_handler.FileHandler')
 
 	def compress_and_encrypt_batch(self,filelist:list):
 		"""
 		given a list of files that need to be compressed/encrypted, generate and size the batches properly so that all of the final products are less than <max upload size>
 		"""
-		log.info("Performing batch compression and encryption.")
+		self.log.info("Performing batch compression and encryption.")
 
 		# first we have to generate the batch assignments
 		left_to_assign = filelist.copy()
@@ -104,7 +114,7 @@ class FileHandler:
 				size = getsize(batch_filename)
 				if num_in_this_batch == 1:
 					# we're just gonna have to live with an overly large file unfortunately. luckily this should be pretty unlikely
-					log.warning("File {} produces a compressed/encrypted archive larger than the upload limit ({} bytes > {} bytes)".format(this_batch_files[0], size, MAX_FILE_SIZE_PER_UPLOAD))
+					self.log.warning("File {} produces a compressed/encrypted archive larger than the upload limit ({} bytes > {} bytes)".format(this_batch_files[0], size, MAX_FILE_SIZE_PER_UPLOAD))
 					good_num_found = True
 				elif size > MAX_FILE_SIZE_PER_UPLOAD:
 					# too big, have to decrease
@@ -133,16 +143,16 @@ class FileHandler:
 					remove(batch_filename)
 				else:
 					# when done get rid of the zip file and image files
-					log.info("Good size found: {} files. Removing zip and packaged files.".format(num_in_this_batch))
+					self.log.info("Good size found: {} files. Removing zip and packaged files.".format(num_in_this_batch))
 					remove(batch_zip_filename)
 					for file in this_batch_files:
-						log.debug("Removing {}".format(file))
+						self.log.debug("Removing {}".format(file))
 						remove(file)
 
 			# update our estimates
 			self.approx_final_bytes_per_img = ((self.approx_final_bytes_per_img*self.num_images_approx_based_on) + getsize(batch_filename)) / (self.num_images_approx_based_on + num_in_this_batch)
 			self.num_images_approx_based_on += num_in_this_batch
-			log.info("New estimated final bytes per image: {}, based on {} total images screened.".format(self.approx_final_bytes_per_img, self.num_images_approx_based_on))
+			self.log.info("New estimated final bytes per image: {}, based on {} total images screened.".format(self.approx_final_bytes_per_img, self.num_images_approx_based_on))
 
 			# assign the files
 			this_batch_files = left_to_assign[:num_in_this_batch]
@@ -153,8 +163,8 @@ class FileHandler:
 			batch_num += 1
 
 		# log adjustment info
-		log.debug("Number of times batch size increased: {}".format(num_upward_adjustments))
-		log.debug("Number of times batch size decreased: {}".format(num_downward_adjustments))
+		self.log.debug("Number of times batch size increased: {}".format(num_upward_adjustments))
+		self.log.debug("Number of times batch size decreased: {}".format(num_downward_adjustments))
 
 		# finally, return the file names we ended up with
 		return final_filenames
