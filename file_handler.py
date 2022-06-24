@@ -89,14 +89,13 @@ class FileHandler:
 		left_to_assign = filelist.copy()
 		assignments = {file:None for file in filelist} # this will map file names onto batch number
 		final_filenames = []
-		all_assigned_and_verified = False
 		batch_num = 0
 
 		# info that is useful for debugging (probably)
 		num_downward_adjustments = 0
 		num_upward_adjustments = 0
 
-		while not all_assigned_and_verified:
+		while len(left_to_assign) > 0:
 			# get the file name for this batch
 			batch_zip_filename = gen_file_name() + "_B{}.zip".format(batch_num)
 			batch_filename = batch_zip_filename + '.gpg'
